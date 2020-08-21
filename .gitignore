@@ -1,0 +1,8 @@
+*
+!.gitignore
+
+!verilog_source
+!verilog_source/*.v
+
+!testbenchs_source
+!testbenchs_source/*.v
