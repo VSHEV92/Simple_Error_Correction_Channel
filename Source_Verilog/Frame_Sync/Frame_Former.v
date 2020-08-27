@@ -96,10 +96,8 @@ begin
             end
             
             // непредусмотренное состояние
-            default: begin
-                FSM_State <= INIT_STATE;
-                $error("Unexpected FSM State");
-            end
+            default: FSM_State <= INIT_STATE;
+            
         endcase
     end
 end

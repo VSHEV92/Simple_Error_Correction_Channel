@@ -1,8 +1,36 @@
-*
+﻿*
 !.gitignore
 
-!verilog_source
-!verilog_source/*.v
+// --------------------------------------------------------------------------------------------------
+// файлы исходников
+!Source_Verilog
+!Source_Verilog/*.v
+!Source_Verilog/*.vh
+!Source_Verilog/BCH_Codeing
+!Source_Verilog/BCH_Codeing/*.v
+!Source_Verilog/BCH_Codeing/*.vh
+!Source_Verilog/Frame_Sync
+!Source_Verilog/Frame_Sync/*.v
+!Source_Verilog/Interleaving
+!Source_Verilog/Interleaving/*.v
 
-!testbenchs_source
-!testbenchs_source/*.v
+// --------------------------------------------------------------------------------------------------
+// файлы Matlab
+!Source_Matlab
+!Source_Matlab/*.m
+
+// --------------------------------------------------------------------------------------------------
+// файлы для тестов
+!Source_Tests
+!Source_Tests/*.v
+
+// --------------------------------------------------------------------------------------------------
+// tcl файлы
+!Source_Tcl
+!Source_Tcl/*.tcl
+
+// --------------------------------------------------------------------------------------------------
+// файлы для System Generator
+!Source_SysGen_Cosim
+!Source_SysGen_Cosim/*.m
+!Source_SysGen_Cosim/*.slx

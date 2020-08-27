@@ -1,16 +1,13 @@
 `timescale 1ns / 1ps
 
-module BCH_Decod_tb();
+module Interleave_tb();
+
+`include "Channel_Params.vh"
 
 // -------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------
 parameter CLK_PERIOD = 10;
 parameter GEN_BITS_NUMB = 200;
-
-parameter BCH_POLYNOM = 4'b1011;
-parameter N = 7;
-parameter K = 4;
-parameter ERROR_PROB = 0.01;
 
 // -------------------------------------------------------------------------------------
 // -------------------------------------------------------------------------------------
@@ -41,20 +38,13 @@ wire outfifo_re;
 wire outfifo_empty;
 wire outfifo_valid;
 
-// сигналы для декодера
-wire decoder_out;
-wire decoder_valid;
-
-// сигналы для канала с ошибками
-wire channel_out;
-wire channel_valid;
-wire error_valid;
+// сигналы для деперемежителя
+wire deinterleaver_out;
+wire deinterleaver_valid;
 
 // сигналы для проверки теста
-integer Error_Bits_Count = 0;
 integer TX_Bit_Count = 0;
 integer RX_Bit_Count = 0;
-integer Err_Count = 0;
 reg [GEN_BITS_NUMB-1:0] TX_Bit_Vector;
 reg [GEN_BITS_NUMB-1:0] RX_Bit_Vector;
 
@@ -118,15 +108,13 @@ infifo (
     .sleep(0)                
    );
 
-// БЧХ кодер
-BCH_Encoder
+// перемежитель
+Interleaver 
 #(
-    .BCH_POLYNOM(BCH_POLYNOM),
-    .N(N),
-    .K(K)
+    .ROW_NUMBER(ROW_NUMBER),
+    .COL_NUMBER(COL_NUMBER)
 )
-BCH_Encoder_Inst
-(
+Interleaver_Inst(
     .CLK(clk),
     .RESET(reset),
     // сигналы для входного FIFO 
@@ -138,6 +126,7 @@ BCH_Encoder_Inst
     .FIFO_OUT_WE(outfifo_we),
     .FIFO_OUT_FULL(outfifo_full)
     );
+
 
 // выходное FIFO
 xpm_fifo_sync #(
@@ -176,39 +165,21 @@ outfifo (
     .injectsbiterr(0), 
     .sleep(0)                
    );
-
-// -------------------------------------------------------------------------------------------------------------------------			
-// канала с ошибками
-Channel
-#(
-    .ERROR_PROB(ERROR_PROB)
-    )
-Channel_Inst    
-    (
-    .CLK(clk),
-    .DATA_IN(outfifo_outdata),
-    .DATA_IN_VALID(outfifo_valid),
-    .DATA_OUT(channel_out),
-    .DATA_OUT_VALID(channel_valid),
-    .ERROR_VALID(error_valid)
-    );
 				
 // -------------------------------------------------------------------------------------------------------------------------			
-// БЧХ декодер
-BCH_Decoder
-#(
-    .BCH_POLYNOM(BCH_POLYNOM),
-    .N(N),
-    .K(K)
-)
-BCH_Decoder_Inst    
+Deinterleaver
+    #(
+    .ROW_NUMBER(ROW_NUMBER),
+    .COL_NUMBER(COL_NUMBER)
+    )
+Deinterleaver_Inst    
     (
     .CLK(clk),
     .RESET(reset),
-    .DATA_IN(channel_out),
-    .DATA_IN_VALID(channel_valid),
-    .DATA_OUT(decoder_out),
-    .DATA_OUT_VALID(decoder_valid)
+    .DATA_IN(outfifo_outdata),
+    .DATA_IN_VALID(outfifo_valid),
+    .DATA_OUT(deinterleaver_out),
+    .DATA_OUT_VALID(deinterleaver_valid)
     );
 
 // -------------------------------------------------------------------------------------------------------------------------			
@@ -220,32 +191,23 @@ begin
         TX_Bit_Count = TX_Bit_Count + 1;
     end
     
-    // подсчитываем и сохраняем данные от блока кадровой синхронизации
-    if (decoder_valid) begin
-        RX_Bit_Vector[RX_Bit_Count] = decoder_out;
+    // подсчитываем и сохраняем данные от деперемежителя
+    if (deinterleaver_valid) begin
+        RX_Bit_Vector[RX_Bit_Count] = deinterleaver_out;
         RX_Bit_Count = RX_Bit_Count + 1;
     end
-    
-    // подсчитываем и сохраняем число сгенерированных ошибок в канале
-    if (error_valid) begin
-        Err_Count = Err_Count + 1;
-    end
-    
     
     // запускаем проверку теста
     if (check_test_start) begin
         $display("Number of transmitted bits: %0d", TX_Bit_Count);
         $display("Number of received bits: %0d", RX_Bit_Count);
-        $display("Number of channel errors: %0d", Err_Count);
         
         for (loop_idx = 0; loop_idx<RX_Bit_Count; loop_idx = loop_idx+1) 
             if (RX_Bit_Vector[loop_idx] != TX_Bit_Vector[loop_idx])
-                Error_Bits_Count = Error_Bits_Count + 1;
-            
-        $display("Number of errors after decoding: %0d", Error_Bits_Count);
+                error_flag = 1;
         
         $display("---------------------------------------");        
-        if (Error_Bits_Count > ERROR_PROB*GEN_BITS_NUMB) $display("TEST FAIL!");
+        if (error_flag) $display("TEST FAIL!");
         else $display("TEST PASS!");
         $display("---------------------------------------");
         
